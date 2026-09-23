@@ -148,6 +148,11 @@
       dualEl.style.display = 'flex';
       document.getElementById('dualMain').textContent = fmtTime(data.emomMinuteRemaining);
       document.getElementById('dualTotal').textContent = fmtTime(data.remaining);
+    } else if (data.isIntervals) {
+      timerEl.style.display = 'none';
+      dualEl.style.display = 'flex';
+      document.getElementById('dualMain').textContent = fmtTime(data.intervalPhaseRemaining);
+      document.getElementById('dualTotal').textContent = fmtTime(data.remaining);
     } else {
       timerEl.style.display = 'block';
       dualEl.style.display = 'none';
