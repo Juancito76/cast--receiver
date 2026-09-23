@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Benessere Gym — Receptor Chromecast</title>
+<style>
+  :root {
+    --bg: #0B0C08;
+    --ink: #F4F4EC;
+    --lime: #C8F551;
+    --coral: #E8542F;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif; overflow: hidden;
+  }
+  #root { display: flex; width: 100vw; height: 100vh; }
+
+  .left {
+    width: 42%; flex-shrink: 0; padding: 4vh 3vw;
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 0.6vh;
+  }
+  .class-name { font-size: 1.1vw; font-weight: 700; color: #9C9D8C; margin-bottom: 1vh; }
+  .block-tag { font-size: 1.3vw; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--lime); }
+  .block-name { font-size: 3vw; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; max-width: 95%; }
+  .instruction { font-size: 1.6vw; font-weight: 700; color: var(--lime); margin-top: 0.5vh; }
+  .timer {
+    font-size: 9.5vw; line-height: 1; font-weight: 800; letter-spacing: -0.02em;
+    margin: 1.5vh 0 0.5vh; font-variant-numeric: tabular-nums; font-family: 'Space Grotesk', 'Inter', sans-serif;
+  }
+  .dual-timer { display: flex; align-items: baseline; gap: 2vw; margin: 1.5vh 0 0.5vh; }
+  .dual-main { font-size: 7vw; font-weight: 800; font-family: 'Space Grotesk','Inter',sans-serif; }
+  .dual-label { font-size: 1vw; color: #9C9D8C; font-weight: 700; }
+  .dual-val { font-size: 2.2vw; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .next { font-size: 1.3vw; color: #9C9D8C; margin-top: 0.5vh; }
+  .paused-badge {
+    display: none; align-items: center; gap: 8px; font-size: 1.1vw; font-weight: 700;
+    color: var(--coral); background: rgba(232,84,47,0.14); padding: 6px 16px; border-radius: 20px; margin-top: 1vh;
+  }
+  .paused-badge.visible { display: inline-flex; }
+
+  .right { flex: 1; display: flex; align-items: center; justify-content: center; padding: 3vh 3vw; position: relative; }
+  .video-wrap { height: 88vh; aspect-ratio: 9/16; background: #000; border-radius: 16px; overflow: hidden; border: 1px solid #2A2C1B; }
+  .video-wrap video, .video-wrap iframe { width: 100%; height: 100%; object-fit: cover; border: none; display: block; }
+  .grid { display: grid; gap: 1.4vw; height: 88vh; width: 100%; }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-4 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+  .grid.cols-5 { grid-template-columns: repeat(3, 1fr); }
+  .grid-item { display: flex; flex-direction: column; align-items: center; gap: 0.8vh; min-height: 0; }
+  .grid-video { flex: 1; width: 100%; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid #2A2C1B; min-height: 0; }
+  .grid-video video, .grid-video iframe { width: 100%; height: 100%; object-fit: cover; border: none; display: block; }
+  .grid-label { font-size: 1.1vw; font-weight: 700; text-align: center; }
+  .grid-rep { font-size: 1.5vw; font-weight: 800; color: var(--lime); }
+
+  .waiting { display: flex; flex-direction: column; align-items: center; gap: 16px; color: #7C7D6C; text-align: center; max-width: 34vw; }
+  .waiting svg { width: 48px; height: 48px; }
+  .waiting p { font-size: 1.3vw; }
+  .waiting .brand { font-size: 1.6vw; font-weight: 800; color: var(--ink); }
+
+  .progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #24261A; }
+  .progress-fill { height: 100%; background: var(--lime); transition: width .25s linear; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="left">
+    <div class="class-name" id="className">—</div>
+    <div class="block-tag" id="blockTag">Calentamiento</div>
+    <div class="block-name" id="blockName">—</div>
+    <div class="instruction" id="instruction" style="display:none;"></div>
+    <div class="timer" id="timer">00:00</div>
+    <div class="dual-timer" id="dualTimer" style="display:none;">
+      <div class="dual-main" id="dualMain">00:00</div>
+      <div><div class="dual-label">Total restante</div><div class="dual-val" id="dualTotal">00:00</div></div>
+    </div>
+    <div class="next" id="next"></div>
+    <div class="paused-badge" id="pausedBadge">⏸ En pausa</div>
+  </div>
+  <div class="right">
+    <div class="video-wrap" id="videoWrap" style="display:none;"></div>
+    <div class="grid" id="grid" style="display:none;"></div>
+    <div class="waiting" id="waiting">
+      <div class="brand">Benessere Gym</div>
+      <p>Esperando a que empiece la clase desde el celular del coach…</p>
+    </div>
+  </div>
+  <div class="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<script src="//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver_framework.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  function fmtTime(totalSec) {
+    totalSec = Math.max(0, Math.round(totalSec || 0));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function extractYoutubeId(url) {
+    if (!url) return null;
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/);
+    return m ? m[1] : null;
+  }
+
+  function renderMediaInto(container, mediaObj) {
+    container.innerHTML = '';
+    if (!mediaObj) return false;
+    if (mediaObj.type === 'file' && mediaObj.fileData) {
+      const v = document.createElement('video');
+      v.src = mediaObj.fileData; v.autoplay = true; v.muted = false; v.loop = true; v.playsInline = true;
+      container.appendChild(v);
+      return true;
+    } else if (mediaObj.type === 'youtube' && mediaObj.youtubeUrl) {
+      const ytId = extractYoutubeId(mediaObj.youtubeUrl);
+      if (ytId) {
+        const iframe = document.createElement('iframe');
+        iframe.src = 'https://www.youtube.com/embed/' + ytId + '?start=' + Math.round(mediaObj.youtubeStart || 0) + '&autoplay=1&mute=0&controls=0&rel=0';
+        iframe.allow = 'autoplay; encrypted-media';
+        container.appendChild(iframe);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function renderFromState(data) {
+    if (!data) return;
+    document.getElementById('waiting').style.display = 'none';
+    document.getElementById('className').textContent = data.className || '—';
+    document.getElementById('blockTag').textContent = data.blockTag || '';
+    document.getElementById('blockName').textContent = data.blockName || '—';
+    const instrEl = document.getElementById('instruction');
+    if (data.instruction) { instrEl.textContent = data.instruction; instrEl.style.display = 'block'; }
+    else instrEl.style.display = 'none';
+    document.getElementById('next').textContent = data.nextLabel || '';
+    document.getElementById('pausedBadge').classList.toggle('visible', !data.running);
+    document.getElementById('progressFill').style.width = (data.progressPct || 0) + '%';
+
+    const timerEl = document.getElementById('timer');
+    const dualEl = document.getElementById('dualTimer');
+    if (data.isEmom) {
+      timerEl.style.display = 'none';
+      dualEl.style.display = 'flex';
+      document.getElementById('dualMain').textContent = fmtTime(data.emomMinuteRemaining);
+      document.getElementById('dualTotal').textContent = fmtTime(data.remaining);
+    } else {
+      timerEl.style.display = 'block';
+      dualEl.style.display = 'none';
+      timerEl.textContent = fmtTime(data.remaining);
+    }
+
+    const videoWrap = document.getElementById('videoWrap');
+    const gridEl = document.getElementById('grid');
+    videoWrap.style.display = 'none';
+    gridEl.style.display = 'none';
+    gridEl.innerHTML = '';
+
+    if (data.grid && data.grid.length > 0) {
+      const n = data.grid.length;
+      const cols = n <= 2 ? 2 : (n === 3 ? 3 : (n === 4 ? 4 : 5));
+      gridEl.className = 'grid cols-' + cols;
+      gridEl.style.display = 'grid';
+      data.grid.forEach(ex => {
+        const item = document.createElement('div');
+        item.className = 'grid-item';
+        const videoBox = document.createElement('div');
+        videoBox.className = 'grid-video';
+        renderMediaInto(videoBox, ex.media);
+        item.appendChild(videoBox);
+        const label = document.createElement('div');
+        label.className = 'grid-label';
+        label.textContent = ex.name + (ex.instruction ? ' · ' + ex.instruction : '');
+        item.appendChild(label);
+        const rep = document.createElement('div');
+        rep.className = 'grid-rep';
+        rep.textContent = ex.rep;
+        item.appendChild(rep);
+        gridEl.appendChild(item);
+      });
+    } else if (data.media) {
+      const shown = renderMediaInto(videoWrap, data.media);
+      videoWrap.style.display = shown ? 'block' : 'none';
+    }
+  }
+
+  // ===== Cast Receiver SDK wiring =====
+  // The sender app (constructor de clases) sends the same lightweight state
+  // snapshot it uses for its own "Modo TV" view, as a custom namespace message.
+  const NAMESPACE = 'urn:x-cast:com.benessere.claseclass';
+
+  try {
+    const context = cast.framework.CastReceiverContext.getInstance();
+    context.addCustomMessageListener(NAMESPACE, function (event) {
+      renderFromState(event.data);
+    });
+
+    const options = new cast.framework.CastReceiverOptions();
+    options.disableIdleTimeout = true; // a class can run 45+ min with no media element "ending"
+    context.start(options);
+  } catch (e) {
+    // SDK not available (e.g. previewing this file outside a real Chromecast) — fine, page still renders statically.
+    console.warn('Cast Receiver SDK not available:', e);
+  }
+})();
+</script>
+</body>
+</html>
